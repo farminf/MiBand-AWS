@@ -18,6 +18,9 @@
     <uses-permission android:name="com.fsck.k9.permission.READ_MESSAGES" />
     <uses-permission android:name="android.permission.READ_CALENDAR" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
+
 
     <uses-feature
         android:name="android.hardware.bluetooth"
@@ -45,6 +48,10 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        <activity
+            android:name=".techedge.AWS"
+            android:label="no label"
+             />
         <activity
             android:name=".activities.SettingsActivity"
             android:label="@string/title_activity_settings"
@@ -193,6 +200,8 @@
             </intent-filter>
         </service>
         <service android:name=".service.DeviceCommunicationService" />
+
+        <service android:name=".techedge.MqttService" />
 
         <receiver
             android:name=".externalevents.BluetoothStateChangeReceiver"

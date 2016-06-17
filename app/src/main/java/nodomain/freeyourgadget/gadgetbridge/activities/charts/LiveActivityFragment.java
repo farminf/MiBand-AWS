@@ -70,7 +70,7 @@ public class LiveActivityFragment extends AbstractChartFragment {
     private LineDataSet mHeartRateSet;
     private int mHeartRate;
 
-    private class Steps {
+    public class Steps {
         private int initialSteps;
 
         private int steps;

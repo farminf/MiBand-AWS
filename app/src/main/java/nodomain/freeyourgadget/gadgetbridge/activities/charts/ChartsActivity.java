@@ -1,5 +1,6 @@
 package nodomain.freeyourgadget.gadgetbridge.activities.charts;
 
+
 import android.app.Dialog;
 import android.content.BroadcastReceiver;
 import android.content.Context;
@@ -22,22 +23,29 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.text.SimpleDateFormat;
+import java.util.Calendar;
 import java.util.Date;
+import java.util.List;
 
 import nodomain.freeyourgadget.gadgetbridge.GBApplication;
+import nodomain.freeyourgadget.gadgetbridge.GBException;
 import nodomain.freeyourgadget.gadgetbridge.R;
 import nodomain.freeyourgadget.gadgetbridge.activities.AbstractFragmentPagerAdapter;
 import nodomain.freeyourgadget.gadgetbridge.activities.AbstractGBFragmentActivity;
+import nodomain.freeyourgadget.gadgetbridge.database.DBHandler;
 import nodomain.freeyourgadget.gadgetbridge.devices.DeviceCoordinator;
+import nodomain.freeyourgadget.gadgetbridge.devices.SampleProvider;
 import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice;
+import nodomain.freeyourgadget.gadgetbridge.model.ActivitySample;
+import nodomain.freeyourgadget.gadgetbridge.techedge.AWS;
 import nodomain.freeyourgadget.gadgetbridge.util.DateTimeUtils;
 import nodomain.freeyourgadget.gadgetbridge.util.DeviceHelper;
 import nodomain.freeyourgadget.gadgetbridge.util.GB;
-
 public class ChartsActivity extends AbstractGBFragmentActivity implements ChartsHost {
 
     private static final Logger LOG = LoggerFactory.getLogger(ChartsActivity.class);
@@ -51,6 +59,8 @@ public class ChartsActivity extends AbstractGBFragmentActivity implements Charts
     private SwipeRefreshLayout swipeLayout;
     private PagerTabStrip mPagerTabStrip;
     private ViewPager viewPager;
+    private int totalSteps = 0;
+
 
     private static class ShowDurationDialog extends Dialog {
         private final String mDuration;
@@ -141,6 +151,7 @@ public class ChartsActivity extends AbstractGBFragmentActivity implements Charts
         // Set up the ViewPager with the sections adapter.
         viewPager = (ViewPager) findViewById(R.id.charts_pager);
         viewPager.setAdapter(getPagerAdapter());
+
         viewPager.addOnPageChangeListener(new ViewPager.OnPageChangeListener() {
             @Override
             public void onPageScrolled(int position, float positionOffset, int positionOffsetPixels) {
@@ -183,6 +194,7 @@ public class ChartsActivity extends AbstractGBFragmentActivity implements Charts
         mPagerTabStrip = (PagerTabStrip) findViewById(R.id.charts_pagerTabStrip);
 
         LinearLayout mainLayout = (LinearLayout) findViewById(R.id.charts_main_layout);
+
     }
 
     private String formatDetailedDuration() {
@@ -245,6 +257,7 @@ public class ChartsActivity extends AbstractGBFragmentActivity implements Charts
         DeviceCoordinator coordinator = DeviceHelper.getInstance().getCoordinator(mGBDevice);
         if (!mGBDevice.isConnected() || !coordinator.supportsActivityDataFetching()) {
             menu.removeItem(R.id.charts_fetch_activity_data);
+            menu.removeItem(R.id.upload_aws_activity_data);
         }
         return true;
     }
@@ -255,11 +268,58 @@ public class ChartsActivity extends AbstractGBFragmentActivity implements Charts
             case R.id.charts_fetch_activity_data:
                 fetchActivityData();
                 return true;
+
+            //******************************************************8
+            case R.id.upload_aws_activity_data:
+                Toast.makeText(this.getApplicationContext(), "battery is: " + mGBDevice.getBatteryLevel(), Toast.LENGTH_LONG).show();
+                Toast.makeText(this.getApplicationContext(), "steps are: " + totalSteps, Toast.LENGTH_LONG).show();
+                //LiveActivityFragment.Steps steps =
+//                Calendar today = Calendar.getInstance();
+//                ActivityAnalysis analysis = new ActivityAnalysis();
+//
+//                try {
+//                    DBHandler db = GBApplication.acquireDB();
+//                    totalSteps = analysis.calculateTotalSteps(getSamplesOfDay(db, today, mGBDevice));
+//                    Toast.makeText(this.getApplicationContext(), "steps are: " + totalSteps, Toast.LENGTH_LONG).show();
+//
+//                } catch (GBException e) {
+//                    e.printStackTrace();
+//                }
+
+                Intent i = new Intent(getApplicationContext(), AWS.class);
+                i.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                i.putExtra("steps", String.valueOf(totalSteps));
+                getApplicationContext().startActivity(i);
+
+                return true;
             default:
                 break;
         }
 
         return super.onOptionsItemSelected(item);
+    }
+
+    private List<ActivitySample> getSamplesOfDay(DBHandler db, Calendar day, GBDevice device) {
+        int startTs;
+        int endTs;
+
+        day = (Calendar) day.clone(); // do not modify the caller's argument
+        day.set(Calendar.HOUR_OF_DAY, 0);
+        day.set(Calendar.MINUTE, 0);
+        day.set(Calendar.SECOND, 0);
+        startTs = (int) (day.getTimeInMillis() / 1000);
+
+        day.set(Calendar.HOUR_OF_DAY, 23);
+        day.set(Calendar.MINUTE, 59);
+        day.set(Calendar.SECOND, 59);
+        endTs = (int) (day.getTimeInMillis() / 1000);
+        SampleProvider provider = getProvider(device);
+        return db.getAllActivitySamples(startTs, endTs, provider);
+    }
+
+    protected SampleProvider getProvider(GBDevice device) {
+        DeviceCoordinator coordinator = DeviceHelper.getInstance().getCoordinator(device);
+        return coordinator.getSampleProvider();
     }
 
     private void enableSwipeRefresh(boolean enable) {

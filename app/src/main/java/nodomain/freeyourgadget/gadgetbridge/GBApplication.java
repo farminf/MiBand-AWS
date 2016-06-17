@@ -173,7 +173,7 @@ public class GBApplication extends Application {
      */
     public static DBHandler acquireDB() throws GBException {
         try {
-            if (dbLock.tryLock(30, TimeUnit.SECONDS)) {
+            if (dbLock.tryLock(60, TimeUnit.SECONDS)) {
                 return mActivityDatabaseHandler;
             }
         } catch (InterruptedException ex) {

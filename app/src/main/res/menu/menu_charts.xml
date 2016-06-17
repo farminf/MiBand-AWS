@@ -7,5 +7,10 @@
         app:showAsAction="ifRoom"
         android:icon="@android:drawable/stat_notify_sync_noanim"
         android:title="@string/controlcenter_fetch_activity_data"/>
+    <item
+        android:id="@+id/upload_aws_activity_data"
+        app:showAsAction="always"
+        android:icon="@android:drawable/ic_dialog_alert"
+        android:title="aws"/>
 
 </menu>

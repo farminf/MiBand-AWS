@@ -18,16 +18,20 @@ import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v4.content.LocalBroadcastManager;
 import android.support.v4.widget.SwipeRefreshLayout;
+import android.util.Log;
 import android.view.ContextMenu;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.AdapterView;
+import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import org.json.JSONException;
+import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -42,6 +46,8 @@ import nodomain.freeyourgadget.gadgetbridge.activities.charts.ChartsActivity;
 import nodomain.freeyourgadget.gadgetbridge.adapter.GBDeviceAdapter;
 import nodomain.freeyourgadget.gadgetbridge.devices.DeviceCoordinator;
 import nodomain.freeyourgadget.gadgetbridge.impl.GBDevice;
+import nodomain.freeyourgadget.gadgetbridge.model.DeviceService;
+import nodomain.freeyourgadget.gadgetbridge.techedge.mqttClient;
 import nodomain.freeyourgadget.gadgetbridge.util.DeviceHelper;
 import nodomain.freeyourgadget.gadgetbridge.util.GB;
 import nodomain.freeyourgadget.gadgetbridge.util.Prefs;
@@ -60,6 +66,10 @@ public class ControlCenter extends GBActivity {
     private SwipeRefreshLayout swipeLayout;
     private GBDeviceAdapter mGBDeviceAdapter;
     private GBDevice selectedDevice = null;
+    private Button te_iot;
+    JSONObject result = new JSONObject();
+    String topic_steps = "$aws/things/band1/shadow/update";
+    mqttClient mqttClient;
 
     private final List<GBDevice> deviceList = new ArrayList<>();
 
@@ -91,9 +101,46 @@ public class ControlCenter extends GBActivity {
                     refreshBusyState(dev);
                     enableSwipeRefresh(selectedDevice);
                     break;
+                //XXX by Farmin
+                case DeviceService.ACTION_REALTIME_STEPS: {
+                    int steps = intent.getIntExtra(DeviceService.EXTRA_REALTIME_STEPS, 0);
+                    long timestamp = intent.getLongExtra(DeviceService.EXTRA_TIMESTAMP, System.currentTimeMillis());
+                    publishtoAWSIOT (steps);
+                    break;
+                }
             }
         }
     };
+
+    //XXX by farmin
+    private void publishtoAWSIOT (int steps){
+        Log.i("steps" , "steps are in AWS: " + steps);
+        //JSONObject desired = new JSONObject();
+        //JSONObject reported = new JSONObject();
+        JSONObject state = new JSONObject();
+        JSONObject steps_Json = new JSONObject();
+        JSONObject desired_steps_Json = new JSONObject();
+
+        //JSONObject post_string = new JSONObject();
+        try {
+            desired_steps_Json.put("steps" , "5000");
+            steps_Json.put("steps" , steps);
+            //desired.put("desired" , desired_steps_Json);
+            // reported.put("reported" , steps_Json);
+            state.put("desired" , desired_steps_Json);
+            state.put("reported" , steps_Json);
+            result.put("state",state);
+
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+
+        Log.i("json_to_send" , "JSON: " + result.toString());
+        mqttClient.connect();
+        mqttClient.publish(topic_steps , result.toString() );
+
+
+    }
 
     private void updateSelectedDevice(GBDevice dev) {
         if (selectedDevice == null) {
@@ -160,6 +207,21 @@ public class ControlCenter extends GBActivity {
             }
         });
 
+        //XXX by farmin
+        te_iot = (Button) findViewById(R.id.te_iot_btn);
+        te_iot.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                GBApplication.deviceService().onEnableRealtimeSteps(true);
+                mqttClient = new mqttClient(getApplicationContext());
+                mqttClient.connect();
+            }
+        });
+
+
+
+
+
         swipeLayout = (SwipeRefreshLayout) findViewById(R.id.controlcenter_swipe_layout);
         swipeLayout.setOnRefreshListener(new SwipeRefreshLayout.OnRefreshListener() {
             @Override
@@ -175,6 +237,9 @@ public class ControlCenter extends GBActivity {
         filterLocal.addAction(ACTION_REFRESH_DEVICELIST);
         filterLocal.addAction(GBDevice.ACTION_DEVICE_CHANGED);
         filterLocal.addAction(BluetoothDevice.ACTION_BOND_STATE_CHANGED);
+        //XXX by farmin
+        filterLocal.addAction(DeviceService.ACTION_REALTIME_STEPS);
+
         LocalBroadcastManager.getInstance(this).registerReceiver(mReceiver, filterLocal);
 
         registerReceiver(mReceiver, new IntentFilter(BluetoothDevice.ACTION_BOND_STATE_CHANGED));
