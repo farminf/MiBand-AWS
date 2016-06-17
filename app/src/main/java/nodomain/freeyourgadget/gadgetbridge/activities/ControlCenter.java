@@ -42,6 +42,7 @@ import java.util.Set;
 import de.cketti.library.changelog.ChangeLog;
 import nodomain.freeyourgadget.gadgetbridge.GBApplication;
 import nodomain.freeyourgadget.gadgetbridge.R;
+import nodomain.freeyourgadget.gadgetbridge.activities.charts.ActivityAnalysis;
 import nodomain.freeyourgadget.gadgetbridge.activities.charts.ChartsActivity;
 import nodomain.freeyourgadget.gadgetbridge.adapter.GBDeviceAdapter;
 import nodomain.freeyourgadget.gadgetbridge.devices.DeviceCoordinator;
@@ -212,7 +213,12 @@ public class ControlCenter extends GBActivity {
         te_iot.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                GBApplication.deviceService().onEnableRealtimeSteps(true);
+                fetchActivityData();
+               // GBApplication.deviceService().onEnableRealtimeSteps(true);
+                //ActivityAnalysis analysis = new ActivityAnalysis();
+                //int totalSteps = analysis.calculateTotalSteps(getSamplesOfDay(GBApplication.acquireDB().getHelper(), day, selectedDevice));
+
+
                 mqttClient = new mqttClient(getApplicationContext());
                 mqttClient.connect();
             }
