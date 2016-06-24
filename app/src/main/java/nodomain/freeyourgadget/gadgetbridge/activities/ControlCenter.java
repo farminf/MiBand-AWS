@@ -36,6 +36,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.Set;
 
@@ -107,6 +108,7 @@ public class ControlCenter extends GBActivity {
                     int steps = intent.getIntExtra(DeviceService.EXTRA_REALTIME_STEPS, 0);
                     long timestamp = intent.getLongExtra(DeviceService.EXTRA_TIMESTAMP, System.currentTimeMillis());
                     publishtoAWSIOT (steps);
+                    GBApplication.deviceService().onEnableRealtimeSteps(false);
                     break;
                 }
             }
@@ -118,6 +120,8 @@ public class ControlCenter extends GBActivity {
         Log.i("steps" , "steps are in AWS: " + steps);
         //JSONObject desired = new JSONObject();
         //JSONObject reported = new JSONObject();
+        long now= System.currentTimeMillis();
+
         JSONObject state = new JSONObject();
         JSONObject steps_Json = new JSONObject();
         JSONObject desired_steps_Json = new JSONObject();
@@ -125,6 +129,7 @@ public class ControlCenter extends GBActivity {
         //JSONObject post_string = new JSONObject();
         try {
             desired_steps_Json.put("steps" , "5000");
+            steps_Json.put("ts" , now);
             steps_Json.put("steps" , steps);
             //desired.put("desired" , desired_steps_Json);
             // reported.put("reported" , steps_Json);
@@ -139,6 +144,7 @@ public class ControlCenter extends GBActivity {
         Log.i("json_to_send" , "JSON: " + result.toString());
         mqttClient.connect();
         mqttClient.publish(topic_steps , result.toString() );
+        GBApplication.deviceService().onEnableRealtimeSteps(false);
 
 
     }
@@ -213,14 +219,16 @@ public class ControlCenter extends GBActivity {
         te_iot.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                fetchActivityData();
-               // GBApplication.deviceService().onEnableRealtimeSteps(true);
+                //fetchActivityData();
+               GBApplication.deviceService().onEnableRealtimeSteps(true);
                 //ActivityAnalysis analysis = new ActivityAnalysis();
                 //int totalSteps = analysis.calculateTotalSteps(getSamplesOfDay(GBApplication.acquireDB().getHelper(), day, selectedDevice));
 
 
                 mqttClient = new mqttClient(getApplicationContext());
                 mqttClient.connect();
+
+
             }
         });
 
